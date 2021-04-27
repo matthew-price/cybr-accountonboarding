@@ -14,7 +14,7 @@ $global:managingGroup="ADgroup" # Group with rights to update passwords
 
 # Variable declaration
 $global:pvwaToken = ""
-
+$global:safeMemberUsername = ""
 
 $global:pvwaToken = function Connect-RestAPI{
     $tinaCreds = Get-Credential -Message "Please enter your Privilege Cloud admin credentials"
@@ -33,15 +33,16 @@ $global:pvwaToken = function Connect-RestAPI{
 }
 
 function Get-AccountToOnboardDetails{
-    $global:AccountToOnboardCredentials = Get-Credential -Message "Please enter the credentials for the account to be onboarded"
+    $global:AccountToOnboardCredentials = Get-Credential -Message "Please enter the credentials for the account to be onboarded (the privileged account details)"
     $global:AccountToOnboardUsername = $global:AccountToOnboardCredentials.UserName
     $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($global:AccountToOnboardCredentials.Password)
     $global:AccountToOnboardPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR) 
     $global:AccountToOnboardUsernameFixed = $global:AccountToOnboardUsername -Replace "\.","-"
+    $global:safeMemberUsername = Get-Credential -Message "Please enter the username that will be allowed to use this account (the non-privileged account)"
 }
 
 function New-CybrSafe{
-    $global:SafeName = "IND-"+$global:AccountToOnboardUsernameFixed
+    $global:SafeName = "IND-"+$global:safeMemberUsername
     $body  = @{
         "safe" = @{
             "SafeName"="$global:SafeName"
@@ -73,7 +74,7 @@ function New-CybrAccount{
 function Set-CybrSafePermissions{
     $body  = @{
         "member" = @{
-            "MemberName"="$global:AccountToOnboardUsername"
+            "MemberName"="$global:safeMemberUsername"
             "SearchIn"="$global:domainName"
             "Permissions" = @{
                 "UseAccounts" = "true"
